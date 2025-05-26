@@ -1,89 +1,196 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+	App,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	TFile,
+	moment,
+} from "obsidian";
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface WritingStreakSettings {
+	folderPath: string;
+	streakStartDate: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+const DEFAULT_SETTINGS: WritingStreakSettings = {
+	folderPath: "",
+	streakStartDate: "",
+};
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class WritingStreakPlugin extends Plugin {
+	settings: WritingStreakSettings;
+	statusBarItem: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// Add status bar item
+		this.statusBarItem = this.addStatusBarItem();
+		this.updateStreakDisplay();
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		// Update streak when files are created or modified
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (file instanceof TFile && this.isFileInTargetFolder(file)) {
+					this.updateStreakDisplay();
 				}
-			}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (file instanceof TFile && this.isFileInTargetFolder(file)) {
+					this.updateStreakDisplay();
+				}
+			}),
+		);
+
+		// Add settings tab
+		this.addSettingTab(new WritingStreakSettingTab(this.app, this));
+
+		// Add command to manually refresh streak
+		this.addCommand({
+			id: "refresh-writing-streak",
+			name: "Refresh writing streak",
+			callback: () => {
+				this.updateStreakDisplay();
+			},
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
+		if (this.statusBarItem) {
+			this.statusBarItem.remove();
+		}
+	}
 
+	isFileInTargetFolder(file: TFile): boolean {
+		if (!this.settings.folderPath) {
+			// If no folder specified, check all files
+			return true;
+		}
+
+		const normalizedFolderPath = this.settings.folderPath.replace(
+			/^\/+|\/+$/g,
+			"",
+		);
+		const fileFolderPath = file.parent?.path || "";
+
+		if (normalizedFolderPath === "") {
+			return fileFolderPath === "";
+		}
+
+		return (
+			fileFolderPath === normalizedFolderPath ||
+			fileFolderPath.startsWith(normalizedFolderPath + "/")
+		);
+	}
+
+	async updateStreakDisplay() {
+		try {
+			const streak = await this.calculateStreak();
+			this.statusBarItem.setText(
+				`🔥 ${streak} day${streak !== 1 ? "s" : ""}`,
+			);
+			this.statusBarItem.addClass("writing-streak-status");
+		} catch (error) {
+			console.error(
+				"Writing Streak: Error updating streak display:",
+				error,
+			);
+			this.statusBarItem.setText("🔥 Error");
+		}
+	}
+
+	async calculateStreak(): Promise<number> {
+		try {
+			const files = this.app.vault.getMarkdownFiles();
+			const targetFiles = files.filter((file) =>
+				this.isFileInTargetFolder(file),
+			);
+
+			if (targetFiles.length === 0) {
+				return 0;
+			}
+
+			// Get dates when files were created or modified
+			const writingDates = new Set<string>();
+
+			for (const file of targetFiles) {
+				try {
+					const stat = await this.app.vault.adapter.stat(file.path);
+					if (stat) {
+						// Use creation date or modification date, whichever is more recent for the day
+						const createdDate = moment(stat.ctime).format(
+							"YYYY-MM-DD",
+						);
+						const modifiedDate = moment(stat.mtime).format(
+							"YYYY-MM-DD",
+						);
+						writingDates.add(createdDate);
+						writingDates.add(modifiedDate);
+					}
+				} catch (fileError) {
+					console.warn(
+						`Writing Streak: Could not stat file ${file.path}:`,
+						fileError,
+					);
+					continue;
+				}
+			}
+
+			// Convert to sorted array of dates
+			const sortedDates = Array.from(writingDates).sort().reverse();
+
+			if (sortedDates.length === 0) {
+				return 0;
+			}
+
+			// Calculate streak from today backwards
+			const today = moment().format("YYYY-MM-DD");
+			let streak = 0;
+			let currentDate = moment();
+
+			// Check if we wrote today or yesterday (to account for time zones and late writing)
+			const hasWrittenToday = sortedDates.includes(today);
+			const yesterday = moment().subtract(1, "day").format("YYYY-MM-DD");
+			const hasWrittenYesterday = sortedDates.includes(yesterday);
+
+			if (!hasWrittenToday && !hasWrittenYesterday) {
+				return 0;
+			}
+
+			// Start counting from today if we wrote today, otherwise from yesterday
+			if (!hasWrittenToday && hasWrittenYesterday) {
+				currentDate = moment().subtract(1, "day");
+			}
+
+			const MAX_STREAK = 99999;
+			// Count consecutive days backwards
+			while (streak < MAX_STREAK) {
+				const dateStr = currentDate.format("YYYY-MM-DD");
+
+				if (sortedDates.includes(dateStr)) {
+					streak++;
+					currentDate = currentDate.subtract(1, "day");
+				} else {
+					break;
+				}
+			}
+
+			return streak;
+		} catch (error) {
+			console.error("Writing Streak: Error calculating streak:", error);
+			return 0;
+		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData(),
+		);
 	}
 
 	async saveSettings() {
@@ -91,44 +198,66 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class WritingStreakSettingTab extends PluginSettingTab {
+	plugin: WritingStreakPlugin;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: WritingStreakPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
+		containerEl.addClass("writing-streak-settings");
+
+		containerEl.createEl("h2", { text: "Writing Streak Settings" });
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName("Folder path")
+			.setDesc(
+				'Specify the folder to monitor for writing activity. Leave empty to monitor all files. Use forward slashes for nested folders (e.g., "Journal/2024").',
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("e.g., Daily Notes")
+					.setValue(this.plugin.settings.folderPath)
+					.onChange(async (value) => {
+						this.plugin.settings.folderPath = value.trim();
+						await this.plugin.saveSettings();
+						await this.plugin.updateStreakDisplay();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Refresh streak")
+			.setDesc(
+				"Manually refresh the streak counter to update the display immediately",
+			)
+			.addButton((button) =>
+				button
+					.setButtonText("Refresh")
+					.setClass("writing-streak-refresh-btn")
+					.setCta()
+					.onClick(async () => {
+						await this.plugin.updateStreakDisplay();
+					}),
+			);
+
+		// Display current streak info
+		const currentStreakDiv = containerEl.createDiv();
+		currentStreakDiv.style.marginTop = "20px";
+		currentStreakDiv.style.padding = "10px";
+		currentStreakDiv.style.border =
+			"1px solid var(--background-modifier-border)";
+		currentStreakDiv.style.borderRadius = "4px";
+
+		this.plugin.calculateStreak().then((streak) => {
+			currentStreakDiv.innerHTML = `
+				<strong>Current Streak:</strong> 🔥 ${streak} day${streak !== 1 ? "s" : ""}<br>
+				<small style="color: var(--text-muted);">Monitoring: ${this.plugin.settings.folderPath || "All files"}</small>
+			`;
+		});
 	}
 }

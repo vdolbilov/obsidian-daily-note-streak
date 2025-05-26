@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-writing-streak",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Display a writing streak counter in the status bar based on consecutive days with files in a specified folder",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
