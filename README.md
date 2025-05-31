@@ -11,6 +11,7 @@ This plugin expects there to be one file per day because it doesn't track multip
 - Configurable folder to monitor
 - Updates automatically on file changes
 - Smart streak calculation (handles same-day/previous-day writing)
+- Desktop only - no status bar on mobile
 
 ## Configuration
 Set your target folder in Settings → Writing Streak. Leave empty to monitor all files.
