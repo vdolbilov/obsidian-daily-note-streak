@@ -1,11 +1,11 @@
 {
-	"id": "writing-streak",
-	"name": "Writing Streak",
+	"id": "daily-note-streak",
+	"name": "Daily note streak",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Display a writing streak counter in the status bar based on consecutive days with files in a specified folder.",
-	"author": "Writing Streak Plugin",
-	"authorUrl": "",
+	"author": "Vitaliy Dolbilov",
+	"authorUrl": "https://github.com/vdolbilov",
 	"fundingUrl": "",
 	"isDesktopOnly": false
 }
