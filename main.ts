@@ -106,13 +106,14 @@ export default class WritingStreakPlugin extends Plugin {
 		try {
 			const files = this.app.vault.getMarkdownFiles();
 			const targetFiles = files.filter(file => this.isFileInTargetFolder(file));
-			
+
 			if (targetFiles.length === 0) return 0;
 
 			const dates = new Set<string>();
 			for (const file of targetFiles) {
 				const stat = await this.app.vault.adapter.stat(file.path);
 				if (stat) {
+					dates.add(moment(stat.ctime).format('YYYY-MM-DD'));
 					dates.add(moment(stat.mtime).format('YYYY-MM-DD'));
 				}
 			}
@@ -123,7 +124,7 @@ export default class WritingStreakPlugin extends Plugin {
 			let streak = 0;
 			let currentDate = moment();
 			const today = currentDate.format('YYYY-MM-DD');
-			
+
 			// Start counting from today or yesterday
 			if (!sortedDates.includes(today)) {
 				currentDate.subtract(1, 'day');
