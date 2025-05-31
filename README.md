@@ -2,6 +2,8 @@
 
 Display your writing streak in the status bar. Meant to be paired with the core [daily note plugin](https://help.obsidian.md/plugins/daily-notes).
 
+<img width="374" alt="Screenshot 2025-05-30 at 10 14 34 PM" src="https://github.com/user-attachments/assets/e18573ea-c3bb-4aa8-b066-92e8f74352d7" />
+
 This plugin expects there to be one file per day because it doesn't track multiple changes to a file.
 
 ## Features
