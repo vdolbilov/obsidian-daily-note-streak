@@ -105,82 +105,38 @@ export default class WritingStreakPlugin extends Plugin {
 	async calculateStreak(): Promise<number> {
 		try {
 			const files = this.app.vault.getMarkdownFiles();
-			const targetFiles = files.filter((file) =>
-				this.isFileInTargetFolder(file),
-			);
+			const targetFiles = files.filter(file => this.isFileInTargetFolder(file));
+			
+			if (targetFiles.length === 0) return 0;
 
-			if (targetFiles.length === 0) {
-				return 0;
-			}
-
-			// Get dates when files were created or modified
-			const writingDates = new Set<string>();
-
+			const dates = new Set<string>();
 			for (const file of targetFiles) {
-				try {
-					const stat = await this.app.vault.adapter.stat(file.path);
-					if (stat) {
-						// Use creation date or modification date, whichever is more recent for the day
-						const createdDate = moment(stat.ctime).format(
-							"YYYY-MM-DD",
-						);
-						const modifiedDate = moment(stat.mtime).format(
-							"YYYY-MM-DD",
-						);
-						writingDates.add(createdDate);
-						writingDates.add(modifiedDate);
-					}
-				} catch (fileError) {
-					console.warn(
-						`Writing Streak: Could not stat file ${file.path}:`,
-						fileError,
-					);
-					continue;
+				const stat = await this.app.vault.adapter.stat(file.path);
+				if (stat) {
+					dates.add(moment(stat.mtime).format('YYYY-MM-DD'));
 				}
 			}
 
-			// Convert to sorted array of dates
-			const sortedDates = Array.from(writingDates).sort().reverse();
+			const sortedDates = Array.from(dates).sort().reverse();
+			if (sortedDates.length === 0) return 0;
 
-			if (sortedDates.length === 0) {
-				return 0;
-			}
-
-			// Calculate streak from today backwards
-			const today = moment().format("YYYY-MM-DD");
 			let streak = 0;
 			let currentDate = moment();
-
-			// Check if we wrote today or yesterday (to account for time zones and late writing)
-			const hasWrittenToday = sortedDates.includes(today);
-			const yesterday = moment().subtract(1, "day").format("YYYY-MM-DD");
-			const hasWrittenYesterday = sortedDates.includes(yesterday);
-
-			if (!hasWrittenToday && !hasWrittenYesterday) {
-				return 0;
+			const today = currentDate.format('YYYY-MM-DD');
+			
+			// Start counting from today or yesterday
+			if (!sortedDates.includes(today)) {
+				currentDate.subtract(1, 'day');
 			}
 
-			// Start counting from today if we wrote today, otherwise from yesterday
-			if (!hasWrittenToday && hasWrittenYesterday) {
-				currentDate = moment().subtract(1, "day");
-			}
-
-			const MAX_STREAK = 99999;
-			// Count consecutive days backwards
-			while (streak < MAX_STREAK) {
-				const dateStr = currentDate.format("YYYY-MM-DD");
-
-				if (sortedDates.includes(dateStr)) {
-					streak++;
-					currentDate = currentDate.subtract(1, "day");
-				} else {
-					break;
-				}
+			while (sortedDates.includes(currentDate.format('YYYY-MM-DD'))) {
+				streak++;
+				currentDate.subtract(1, 'day');
 			}
 
 			return streak;
 		} catch (error) {
-			console.error("Writing Streak: Error calculating streak:", error);
+			console.error("Error calculating streak:", error);
 			return 0;
 		}
 	}

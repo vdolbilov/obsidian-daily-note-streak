@@ -1,44 +1,28 @@
 # Writing Streak Plugin
 
-A simple Obsidian plugin that displays your writing streak in the status bar. The streak counts consecutive days where you've created or modified files in a specified folder.
+An Obsidian plugin that displays your writing streak in the status bar.
 
 ## Features
-
-- **Status Bar Display**: Shows your current writing streak (e.g., "🔥 5 days") in the bottom status bar
-- **Configurable Folder**: Choose which folder to monitor for writing activity
-- **Automatic Updates**: Streak updates automatically when you create or modify files
-- **Smart Streak Logic**: Counts consecutive days with writing activity, allowing for same-day or previous-day writing
-
-## How It Works
-
-The plugin tracks your writing streak by:
-
-1. Monitoring files in your specified folder (or all files if no folder is set)
-2. Checking file creation and modification dates
-3. Counting consecutive days with file activity, working backwards from today
-4. Displaying the current streak in the status bar with a fire emoji
+- Shows current streak in status bar (e.g. "🔥 5 days")
+- Configurable folder to monitor
+- Updates automatically on file changes
+- Smart streak calculation (handles same-day/previous-day writing)
 
 ## Installation
-
-### Manual Installation
-
-1. Download the latest release files (`main.js`, `manifest.json`, `styles.css`)
-2. Create a folder called `writing-streak` in your vault's `.obsidian/plugins/` directory
-3. Place the downloaded files in the `writing-streak` folder
-4. Reload Obsidian or enable the plugin in Settings → Community Plugins
-
-### Development Installation
-
-1. Clone this repository to your vault's `.obsidian/plugins/` directory
-2. Run `npm install` to install dependencies
-3. Run `npm run build` to compile the plugin
-4. Reload Obsidian or enable the plugin in Settings → Community Plugins
+1. Install via Obsidian Community Plugins
+2. Enable plugin in Settings
+3. Optionally configure folder path
 
 ## Configuration
+Set your target folder in Settings → Writing Streak. Leave empty to monitor all files.
 
-1. Go to Settings → Community Plugins → Writing Streak → Options
-2. Set your **Folder path** (e.g., "Daily Notes", "Journal", or leave empty for all files)
-3. The streak will update automatically
+## Usage
+The streak updates automatically when you create or modify files. Click the status bar item to refresh.
+
+## Troubleshooting
+- Ensure folder path is correct
+- Try refreshing the plugin
+- Check file timestamps if streak seems wrong
 
 ## Usage
 
