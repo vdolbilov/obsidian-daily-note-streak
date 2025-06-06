@@ -5,16 +5,18 @@ import {
 	Setting,
 	TFile,
 	moment,
-} from "obsidian";
+} from 'obsidian';
 
 interface WritingStreakSettings {
 	folderPath: string;
 	streakStartDate: string;
+	oneDayGrace: boolean;
 }
 
 const DEFAULT_SETTINGS: WritingStreakSettings = {
-	folderPath: "",
-	streakStartDate: "",
+	folderPath: '',
+	streakStartDate: '',
+	oneDayGrace: false,
 };
 
 export default class WritingStreakPlugin extends Plugin {
@@ -30,7 +32,7 @@ export default class WritingStreakPlugin extends Plugin {
 
 		// Update streak when files are created or modified
 		this.registerEvent(
-			this.app.vault.on("create", (file) => {
+			this.app.vault.on('create', (file) => {
 				if (file instanceof TFile && this.isFileInTargetFolder(file)) {
 					this.updateStreakDisplay();
 				}
@@ -38,7 +40,7 @@ export default class WritingStreakPlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.vault.on("modify", (file) => {
+			this.app.vault.on('modify', (file) => {
 				if (file instanceof TFile && this.isFileInTargetFolder(file)) {
 					this.updateStreakDisplay();
 				}
@@ -50,8 +52,8 @@ export default class WritingStreakPlugin extends Plugin {
 
 		// Add command to manually refresh streak
 		this.addCommand({
-			id: "refresh-writing-streak",
-			name: "Refresh writing streak",
+			id: 'refresh-writing-streak',
+			name: 'Refresh writing streak',
 			callback: () => {
 				this.updateStreakDisplay();
 			},
@@ -72,17 +74,17 @@ export default class WritingStreakPlugin extends Plugin {
 
 		const normalizedFolderPath = this.settings.folderPath.replace(
 			/^\/+|\/+$/g,
-			"",
+			'',
 		);
-		const fileFolderPath = file.parent?.path || "";
+		const fileFolderPath = file.parent?.path || '';
 
-		if (normalizedFolderPath === "") {
-			return fileFolderPath === "";
+		if (normalizedFolderPath === '') {
+			return fileFolderPath === '';
 		}
 
 		return (
 			fileFolderPath === normalizedFolderPath ||
-			fileFolderPath.startsWith(normalizedFolderPath + "/")
+			fileFolderPath.startsWith(normalizedFolderPath + '/')
 		);
 	}
 
@@ -90,22 +92,24 @@ export default class WritingStreakPlugin extends Plugin {
 		try {
 			const streak = await this.calculateStreak();
 			this.statusBarItem.setText(
-				`🔥 ${streak} day${streak !== 1 ? "s" : ""}`,
+				`🔥 ${streak} day${streak !== 1 ? 's' : ''}`,
 			);
-			this.statusBarItem.addClass("writing-streak-status");
+			this.statusBarItem.addClass('writing-streak-status');
 		} catch (error) {
 			console.error(
-				"Writing Streak: Error updating streak display:",
+				'Writing Streak: Error updating streak display:',
 				error,
 			);
-			this.statusBarItem.setText("🔥 Error");
+			this.statusBarItem.setText('🔥 Error');
 		}
 	}
 
 	async calculateStreak(): Promise<number> {
 		try {
 			const files = this.app.vault.getMarkdownFiles();
-			const targetFiles = files.filter(file => this.isFileInTargetFolder(file));
+			const targetFiles = files.filter((file) =>
+				this.isFileInTargetFolder(file),
+			);
 
 			if (targetFiles.length === 0) return 0;
 
@@ -123,21 +127,33 @@ export default class WritingStreakPlugin extends Plugin {
 
 			let streak = 0;
 			let currentDate = moment();
-			const today = currentDate.format('YYYY-MM-DD');
 
-			// Start counting from today or yesterday
-			if (!sortedDates.includes(today)) {
-				currentDate.subtract(1, 'day');
-			}
+			const MAX_STREAK = 99999;
+			while (streak < MAX_STREAK) {
+				const dateStr = currentDate.format('YYYY-MM-DD');
 
-			while (sortedDates.includes(currentDate.format('YYYY-MM-DD'))) {
-				streak++;
-				currentDate.subtract(1, 'day');
+				if (sortedDates.includes(dateStr)) {
+					streak++;
+					currentDate.subtract(1, 'day');
+				} else if (this.settings.oneDayGrace) {
+					// Skip this day and try the next
+					currentDate.subtract(1, 'day');
+					const nextDateStr = currentDate.format('YYYY-MM-DD');
+					if (sortedDates.includes(nextDateStr)) {
+						streak++;
+						currentDate.subtract(1, 'day');
+					} else {
+						break;
+					}
+				} else {
+					// No grace period, streak ends
+					break;
+				}
 			}
 
 			return streak;
 		} catch (error) {
-			console.error("Error calculating streak:", error);
+			console.error('Error calculating streak:', error);
 			return 0;
 		}
 	}
@@ -167,18 +183,18 @@ class WritingStreakSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-		containerEl.addClass("writing-streak-settings");
+		containerEl.addClass('writing-streak-settings');
 
-		containerEl.createEl("h2", { text: "Writing Streak Settings" });
+		containerEl.createEl('h2', { text: 'Writing Streak Settings' });
 
 		new Setting(containerEl)
-			.setName("Folder path")
+			.setName('Folder path')
 			.setDesc(
 				'Specify the folder to monitor for writing activity. Leave empty to monitor all files. Use forward slashes for nested folders (e.g., "Journal/2024").',
 			)
 			.addText((text) =>
 				text
-					.setPlaceholder("e.g., Daily Notes")
+					.setPlaceholder('e.g., Daily Notes')
 					.setValue(this.plugin.settings.folderPath)
 					.onChange(async (value) => {
 						this.plugin.settings.folderPath = value.trim();
@@ -188,14 +204,27 @@ class WritingStreakSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Refresh streak")
+			.setName('One day grace')
+			.setDesc('Allows streaks to continue when missing 1 day.')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.oneDayGrace)
+					.onChange(async (value) => {
+						this.plugin.settings.oneDayGrace = value;
+						await this.plugin.saveSettings();
+						await this.plugin.updateStreakDisplay();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Refresh streak')
 			.setDesc(
-				"Manually refresh the streak counter to update the display immediately",
+				'Manually refresh the streak counter to update the display immediately',
 			)
 			.addButton((button) =>
 				button
-					.setButtonText("Refresh")
-					.setClass("writing-streak-refresh-btn")
+					.setButtonText('Refresh')
+					.setClass('writing-streak-refresh-btn')
 					.setCta()
 					.onClick(async () => {
 						await this.plugin.updateStreakDisplay();
@@ -204,16 +233,16 @@ class WritingStreakSettingTab extends PluginSettingTab {
 
 		// Display current streak info
 		const currentStreakDiv = containerEl.createDiv();
-		currentStreakDiv.style.marginTop = "20px";
-		currentStreakDiv.style.padding = "10px";
+		currentStreakDiv.style.marginTop = '20px';
+		currentStreakDiv.style.padding = '10px';
 		currentStreakDiv.style.border =
-			"1px solid var(--background-modifier-border)";
-		currentStreakDiv.style.borderRadius = "4px";
+			'1px solid var(--background-modifier-border)';
+		currentStreakDiv.style.borderRadius = '4px';
 
 		this.plugin.calculateStreak().then((streak) => {
 			currentStreakDiv.innerHTML = `
-				<strong>Current Streak:</strong> 🔥 ${streak} day${streak !== 1 ? "s" : ""}<br>
-				<small style="color: var(--text-muted);">Monitoring: ${this.plugin.settings.folderPath || "All files"}</small>
+				<strong>Current Streak:</strong> 🔥 ${streak} day${streak !== 1 ? 's' : ''}<br>
+				<small style="color: var(--text-muted);">Monitoring: ${this.plugin.settings.folderPath || 'All files'}</small>
 			`;
 		});
 	}
