@@ -11,10 +11,13 @@ This plugin expects there to be one file per day because it doesn't track multip
 - Configurable folder to monitor
 - Updates automatically on file changes
 - Smart streak calculation (handles same-day/previous-day writing)
+- Optional one-day grace period to allow missing a single day
 - Desktop only - no status bar on mobile
 
 ## Configuration
-Set your target folder in Settings → Writing Streak. Leave empty to monitor all files.
+In Settings → Writing Streak:
+- **Folder path**: Set your target folder to monitor. Leave empty to monitor all files.
+- **One day grace**: Enable to allow streaks to continue when missing a single day.
 
 ## Troubleshooting
 - Ensure folder path is correct
@@ -34,6 +37,5 @@ The streak counter:
 - **Starts counting** from consecutive days with file activity
 - **Continues** as long as you have file activity each day
 - **Tracks** both the created date and last updated date of a file
-- **Breaks** if there's a gap of more than one day without activity
-- **Allows flexibility** by checking both today and yesterday to account for different writing schedules
-
+- **Breaks** when there's no activity for consecutive days (configurable with grace period)
+- **Grace period** (optional): When enabled, allows missing a single day without breaking the streak
