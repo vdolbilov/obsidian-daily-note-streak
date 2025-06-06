@@ -1,7 +1,7 @@
 {
 	"id": "daily-note-streak",
 	"name": "Daily note streak",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Display a writing streak counter in the status bar based on consecutive days with files in a specified folder.",
 	"author": "Vitaliy Dolbilov",
