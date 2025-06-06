@@ -200,6 +200,7 @@ class WritingStreakSettingTab extends PluginSettingTab {
 						this.plugin.settings.folderPath = value.trim();
 						await this.plugin.saveSettings();
 						await this.plugin.updateStreakDisplay();
+						this.showStreakInSettings();
 					}),
 			);
 
@@ -213,6 +214,7 @@ class WritingStreakSettingTab extends PluginSettingTab {
 						this.plugin.settings.oneDayGrace = value;
 						await this.plugin.saveSettings();
 						await this.plugin.updateStreakDisplay();
+						this.showStreakInSettings();
 					}),
 			);
 
@@ -228,22 +230,31 @@ class WritingStreakSettingTab extends PluginSettingTab {
 					.setCta()
 					.onClick(async () => {
 						await this.plugin.updateStreakDisplay();
+						this.showStreakInSettings();
 					}),
 			);
 
 		// Display current streak info
 		const currentStreakDiv = containerEl.createDiv();
+		currentStreakDiv.id = 'settings-streak';
 		currentStreakDiv.style.marginTop = '20px';
 		currentStreakDiv.style.padding = '10px';
 		currentStreakDiv.style.border =
 			'1px solid var(--background-modifier-border)';
 		currentStreakDiv.style.borderRadius = '4px';
 
-		this.plugin.calculateStreak().then((streak) => {
-			currentStreakDiv.innerHTML = `
+		this.showStreakInSettings();
+	}
+
+	showStreakInSettings() {
+		const div = document.getElementById('settings-streak');
+		if (div) {
+			this.plugin.calculateStreak().then((streak) => {
+				div.innerHTML = `
 				<strong>Current Streak:</strong> 🔥 ${streak} day${streak !== 1 ? 's' : ''}<br>
 				<small style="color: var(--text-muted);">Monitoring: ${this.plugin.settings.folderPath || 'All files'}</small>
-			`;
-		});
+				`;
+			});
+		}
 	}
 }
