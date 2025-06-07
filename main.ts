@@ -200,7 +200,7 @@ class WritingStreakSettingTab extends PluginSettingTab {
 						this.plugin.settings.folderPath = value.trim();
 						await this.plugin.saveSettings();
 						await this.plugin.updateStreakDisplay();
-						this.showStreakInSettings();
+						this.showStreakInSettings(containerEl);
 					}),
 			);
 
@@ -214,7 +214,7 @@ class WritingStreakSettingTab extends PluginSettingTab {
 						this.plugin.settings.oneDayGrace = value;
 						await this.plugin.saveSettings();
 						await this.plugin.updateStreakDisplay();
-						this.showStreakInSettings();
+						this.showStreakInSettings(containerEl);
 					}),
 			);
 
@@ -230,31 +230,28 @@ class WritingStreakSettingTab extends PluginSettingTab {
 					.setCta()
 					.onClick(async () => {
 						await this.plugin.updateStreakDisplay();
-						this.showStreakInSettings();
+						this.showStreakInSettings(containerEl);
 					}),
 			);
 
 		// Display current streak info
-		const currentStreakDiv = containerEl.createDiv();
-		currentStreakDiv.id = 'settings-streak';
-		currentStreakDiv.style.marginTop = '20px';
-		currentStreakDiv.style.padding = '10px';
-		currentStreakDiv.style.border =
-			'1px solid var(--background-modifier-border)';
-		currentStreakDiv.style.borderRadius = '4px';
 
-		this.showStreakInSettings();
+		this.showStreakInSettings(containerEl);
 	}
 
-	showStreakInSettings() {
-		const div = document.getElementById('settings-streak');
-		if (div) {
-			this.plugin.calculateStreak().then((streak) => {
-				div.innerHTML = `
-				<strong>Current Streak:</strong> 🔥 ${streak} day${streak !== 1 ? 's' : ''}<br>
-				<small style="color: var(--text-muted);">Monitoring: ${this.plugin.settings.folderPath || 'All files'}</small>
-				`;
+	showStreakInSettings(containerEl: HTMLElement) {
+		containerEl.find('.settings-streak')?.remove();
+
+		this.plugin.calculateStreak().then((streak) => {
+			const currentStreakDiv = containerEl.createDiv();
+			currentStreakDiv.className = 'settings-streak';
+
+			currentStreakDiv.createDiv({
+				text: `Current streak: 🔥 ${streak} day${streak !== 1 ? 's' : ''}`,
 			});
-		}
+			currentStreakDiv.createEl('small', {
+				text: `Monitoring folder: ${this.plugin.settings.folderPath || 'All files'}`,
+			});
+		});
 	}
 }

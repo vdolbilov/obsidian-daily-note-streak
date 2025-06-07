@@ -1,9 +1,10 @@
 /* Writing Streak Plugin Styles */
 
-.status-bar-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.settings-streak {
+	margin-top: 20px;
+	padding: 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
 }
 
 .writing-streak-status {
@@ -14,11 +15,6 @@
 
 .writing-streak-status:hover {
     color: var(--text-accent);
-}
-
-.writing-streak-fire {
-    font-size: 14px;
-    margin-right: 2px;
 }
 
 /* Settings page styling */
